@@ -1,55 +1,108 @@
-import { AbsoluteFill, Artifact, useCurrentFrame, useVideoConfig } from "remotion";
-import { loadFont } from "@remotion/google-fonts/SpaceMono";
+import { AbsoluteFill, Artifact, useCurrentFrame, Sequence } from "remotion";
+import { TransitionSeries, linearTiming } from "@remotion/transitions";
+import { loadFont } from "@remotion/google-fonts/Inter";
+import { Audio } from "@remotion/media";
+import { slideOver } from "../library/components/layout/transitions/presentations";
+import { Background } from "./Background";
+import { IntroScene } from "./IntroScene";
+import { PricingScene } from "./PricingScene";
+import { ServicesScene } from "./ServicesScene";
+import { BulkScene } from "./BulkScene";
+import { CTAScene } from "./CTAScene";
 
-const LoaderDots = () => {
-  const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
+const { fontFamily } = loadFont("normal", {
+  weights: ["400", "500", "600", "700", "800"],
+  subsets: ["latin"],
+});
 
-  const dot = (index: number) => {
-    const phase = (frame / fps) * 2 * Math.PI + index * 0.8;
-    return 0.35 + Math.max(0, Math.sin(phase)) * 0.65;
-  };
+// Scene durations (frames at 30fps)
+const INTRO = 120;       // 4s
+const PRICING = 130;     // ~4.3s
+const SERVICES = 130;    // ~4.3s
+const BULK = 130;        // ~4.3s
+const CTA = 120;         // 4s
+const TRANSITION = 15;   // 0.5s transitions
 
-  return (
-    <span className="inline-flex gap-1">
-      {[0, 1, 2].map((i) => (
-        <span
-          key={i}
-          className="inline-block text-sky-300"
-          style={{ opacity: dot(i) }}
-        >
-          .
-        </span>
-      ))}
-    </span>
-  );
-};
+// Total = 630 - 4*15 = 570 frames = 19s
+
+const WHOOSH_URL = "https://pub-e3bfc0083b0644b296a7080b21024c5f.r2.dev/sfx/1772944155651_8e4d6ps87a2_sfx_Subtle_modern_UI_whoosh_transi.mp3";
+const CHIME_URL = "https://pub-e3bfc0083b0644b296a7080b21024c5f.r2.dev/sfx/1772944159518_ij6y3mv0yh_sfx_Soft_positive_digital_notifica.mp3";
 
 export const Main: React.FC = () => {
-  const { fontFamily } = loadFont();
   const frame = useCurrentFrame();
+
+  // Transition timings for SFX
+  const transitionFrames = [
+    INTRO - TRANSITION,
+    INTRO + PRICING - 2 * TRANSITION,
+    INTRO + PRICING + SERVICES - 3 * TRANSITION,
+    INTRO + PRICING + SERVICES + BULK - 4 * TRANSITION,
+  ];
+
   return (
     <>
-      {/* Leave this here to generate a thumbnail */}
       {frame === 0 && (
         <Artifact content={Artifact.Thumbnail} filename="thumbnail.jpeg" />
       )}
-      <AbsoluteFill className="flex items-center justify-center bg-[#0f1115]">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(99,102,241,0.28),transparent_45%),radial-gradient(circle_at_70%_60%,rgba(16,185,129,0.2),transparent_50%)]" />
-        <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(255,255,255,0.05)_1px,transparent_1px),linear-gradient(180deg,rgba(255,255,255,0.05)_1px,transparent_1px)] [background-size:48px_48px] opacity-40" />
-        <div
-          className="flex flex-col items-center gap-4 text-center text-white drop-shadow-[0_12px_32px_rgba(0,0,0,0.55)]"
-          style={{ fontFamily, fontWeight: 700, letterSpacing: "0.01em" }}
-        >
-          <div className="text-4xl md:text-5xl font-bold">
-            <span className="font-extrabold text-sky-300">TypeFrames</span> is
-            building your video
-            <LoaderDots />
-          </div>
-          <div className="text-base md:text-lg text-white/70">
-            Rendering scenes, timing transitions, and polishing frames.
-          </div>
-        </div>
+
+      <AbsoluteFill style={{ fontFamily }}>
+        {/* Persistent background */}
+        <Background />
+
+        {/* Scene transitions */}
+        <TransitionSeries>
+          <TransitionSeries.Sequence durationInFrames={INTRO}>
+            <IntroScene />
+          </TransitionSeries.Sequence>
+
+          <TransitionSeries.Transition
+            presentation={slideOver("left")}
+            timing={linearTiming({ durationInFrames: TRANSITION })}
+          />
+
+          <TransitionSeries.Sequence durationInFrames={PRICING}>
+            <PricingScene />
+          </TransitionSeries.Sequence>
+
+          <TransitionSeries.Transition
+            presentation={slideOver("left")}
+            timing={linearTiming({ durationInFrames: TRANSITION })}
+          />
+
+          <TransitionSeries.Sequence durationInFrames={SERVICES}>
+            <ServicesScene />
+          </TransitionSeries.Sequence>
+
+          <TransitionSeries.Transition
+            presentation={slideOver("left")}
+            timing={linearTiming({ durationInFrames: TRANSITION })}
+          />
+
+          <TransitionSeries.Sequence durationInFrames={BULK}>
+            <BulkScene />
+          </TransitionSeries.Sequence>
+
+          <TransitionSeries.Transition
+            presentation={slideOver("left")}
+            timing={linearTiming({ durationInFrames: TRANSITION })}
+          />
+
+          <TransitionSeries.Sequence durationInFrames={CTA}>
+            <CTAScene />
+          </TransitionSeries.Sequence>
+        </TransitionSeries>
+
+        {/* Sound effects on transitions */}
+        {transitionFrames.map((f, i) => (
+          <Sequence key={i} from={f}>
+            <Audio src={WHOOSH_URL} volume={0.25} />
+          </Sequence>
+        ))}
+
+        {/* Chime on CTA */}
+        <Sequence from={transitionFrames[3] + 20}>
+          <Audio src={CHIME_URL} volume={0.2} />
+        </Sequence>
       </AbsoluteFill>
     </>
   );
